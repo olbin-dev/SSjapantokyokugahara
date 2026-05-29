@@ -1,726 +1,1082 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Goose + Ollama 接続トラブルシューティング完全ガイド</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #0d1117;
-    --surface: #161b22;
-    --surface2: #21262d;
-    --border: #30363d;
-    --green: #3fb950;
-    --green-dim: #1a4a24;
-    --red: #f85149;
-    --red-dim: #3d1a1a;
-    --yellow: #d29922;
-    --yellow-dim: #3a2d00;
-    --blue: #58a6ff;
-    --blue-dim: #1a3a5c;
-    --purple: #bc8cff;
-    --text: #e6edf3;
-    --text-muted: #8b949e;
-    --text-dim: #484f58;
-    --mono: 'JetBrains Mono', 'Space Mono', monospace;
-    --sans: 'Noto Sans JP', sans-serif;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sovereign Systems (SS) Log</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #060913;
+      --card-bg: rgba(15, 23, 42, 0.4);
+      --border-color: rgba(255, 255, 255, 0.05);
+      --border-glow: rgba(99, 102, 241, 0.2);
+      --text-main: #f1f5f9;
+      --text-muted: #64748b;
+      --accent: #3fb950;
+      --accent-gradient: linear-gradient(135deg, #3fb950 0%, #30883f 100%);
+      --accent-blue: #58a6ff;
+      --accent-purple: #bc8cff;
+      --code-bg: #090d16;
+      --sidebar-width: 280px;
+      --red: #f85149;
+      --red-dim: rgba(248, 81, 73, 0.1);
+      --green: #3fb950;
+      --green-dim: rgba(63, 185, 80, 0.1);
+      --yellow: #d29922;
+      --yellow-dim: rgba(210, 153, 34, 0.1);
+      --blue: #58a6ff;
+      --blue-dim: rgba(88, 166, 255, 0.1);
+    }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    line-height: 1.7;
-    min-height: 100vh;
-  }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.7;
+      display: flex;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-  /* Header */
-  .hero {
-    background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
-    border-bottom: 1px solid var(--border);
-    padding: 60px 40px 50px;
-    position: relative;
-    overflow: hidden;
-  }
+    /* Sidebar Navigation */
+    nav.sidebar {
+      width: var(--sidebar-width);
+      background-color: rgba(10, 15, 30, 0.8);
+      border-right: 1px solid var(--border-color);
+      padding: 30px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      backdrop-filter: blur(12px);
+      position: fixed;
+      height: 100vh;
+      left: 0;
+      top: 0;
+      z-index: 10;
+    }
 
-  .hero::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -20%;
-    width: 60%;
-    height: 200%;
-    background: radial-gradient(ellipse, rgba(63,185,80,0.06) 0%, transparent 70%);
-    pointer-events: none;
-  }
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-  .hero-inner {
-    max-width: 900px;
-    margin: 0 auto;
-    position: relative;
-  }
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent-gradient);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+      font-family: 'Outfit', sans-serif;
+      color: #fff;
+    }
 
-  .badge {
-    display: inline-block;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--green);
-    background: var(--green-dim);
-    border: 1px solid var(--green);
-    padding: 3px 10px;
-    border-radius: 20px;
-    margin-bottom: 20px;
-    letter-spacing: 0.05em;
-  }
+    .logo-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 19px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
 
-  h1 {
-    font-size: clamp(24px, 4vw, 38px);
-    font-weight: 700;
-    line-height: 1.3;
-    margin-bottom: 16px;
-    letter-spacing: -0.02em;
-  }
+    .menu-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
 
-  h1 .goose { color: var(--green); }
-  h1 .arrow { color: var(--text-muted); margin: 0 8px; }
-  h1 .ollama { color: var(--blue); }
+    .menu-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
-  .hero-meta {
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--text-muted);
-    display: flex;
-    gap: 24px;
-    flex-wrap: wrap;
-  }
+    .menu-item {
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-  .hero-meta span::before { margin-right: 6px; }
+    .menu-item:hover {
+      background: rgba(255, 255, 255, 0.02);
+      color: #fff;
+    }
 
-  /* Layout */
-  .container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 0 40px 80px;
-  }
+    .menu-item.active {
+      background: rgba(63, 185, 80, 0.1);
+      border-color: rgba(63, 185, 80, 0.2);
+      color: var(--green);
+      font-weight: 600;
+    }
 
-  /* Section */
-  .section {
-    margin-top: 48px;
-  }
+    /* Main Content Area */
+    main.content-area {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      padding: 40px 60px 80px;
+      max-width: 1100px;
+    }
 
-  .section-title {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
-  }
+    /* Top Control Bar */
+    .top-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 40px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 20px;
+    }
 
-  h2 {
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 12px;
-    color: var(--text);
-  }
+    .lang-switcher {
+      display: flex;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 30px;
+      padding: 4px;
+    }
 
-  h3 {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--blue);
-    margin: 24px 0 10px;
-    font-family: var(--mono);
-  }
+    .lang-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Outfit', sans-serif;
+    }
 
-  p { color: var(--text-muted); margin-bottom: 12px; font-size: 15px; }
-  p strong { color: var(--text); }
+    .lang-btn.active {
+      background: var(--accent-gradient);
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(63, 185, 80, 0.25);
+    }
 
-  /* Cards */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px 24px;
-    margin-bottom: 16px;
-  }
+    /* Article Card */
+    article.post-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      padding: 48px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      display: none;
+    }
 
-  .card-error {
-    border-color: var(--red);
-    background: var(--red-dim);
-  }
+    article.post-card.active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
 
-  .card-success {
-    border-color: var(--green);
-    background: var(--green-dim);
-  }
+    .meta-info {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      color: #64748b;
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
 
-  .card-warning {
-    border-color: var(--yellow);
-    background: var(--yellow-dim);
-  }
+    .tag {
+      background: rgba(63, 185, 80, 0.08);
+      color: var(--green);
+      padding: 2px 10px;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 11px;
+    }
 
-  .card-info {
-    border-color: var(--blue);
-    background: var(--blue-dim);
-  }
+    h1.post-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 30px;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
 
-  .card-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    margin-bottom: 8px;
-  }
+    .post-content {
+      font-size: 15px;
+      color: #cbd5e1;
+    }
 
-  .label-error { color: var(--red); }
-  .label-success { color: var(--green); }
-  .label-warning { color: var(--yellow); }
-  .label-info { color: var(--blue); }
+    .post-content h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 600;
+      margin-top: 36px;
+      margin-bottom: 16px;
+      color: #fff;
+      border-left: 4px solid var(--green);
+      padding-left: 12px;
+    }
 
-  /* Code blocks */
-  pre {
-    background: #010409;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 16px 20px;
-    overflow-x: auto;
-    margin: 12px 0;
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.6;
-  }
+    .post-content h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      color: #e2e8f0;
+    }
 
-  code {
-    font-family: var(--mono);
-    font-size: 13px;
-    background: var(--surface2);
-    padding: 2px 6px;
-    border-radius: 4px;
-    color: var(--purple);
-  }
+    .post-content p {
+      margin-bottom: 20px;
+    }
 
-  pre code {
-    background: none;
-    padding: 0;
-    color: var(--text);
-  }
+    .post-content ul, .post-content ol {
+      margin-left: 24px;
+      margin-bottom: 24px;
+    }
 
-  .comment { color: var(--text-dim); }
-  .cmd { color: var(--green); }
-  .val { color: var(--blue); }
-  .err { color: var(--red); }
-  .ok { color: var(--green); }
+    .post-content li {
+      margin-bottom: 8px;
+    }
 
-  /* Steps */
-  .steps { counter-reset: step; }
+    /* Cards in Goose Guide */
+    .card {
+      background: rgba(22, 27, 34, 0.5);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
 
-  .step {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 32px;
-    position: relative;
-  }
+    .card-error {
+      border-color: var(--red);
+      background: var(--red-dim);
+    }
 
-  .step::before {
-    content: '';
-    position: absolute;
-    left: 18px;
-    top: 38px;
-    bottom: -20px;
-    width: 1px;
-    background: var(--border);
-  }
+    .card-success {
+      border-color: var(--green);
+      background: var(--green-dim);
+    }
 
-  .step:last-child::before { display: none; }
+    .card-warning {
+      border-color: var(--yellow);
+      background: var(--yellow-dim);
+    }
 
-  .step-num {
-    counter-increment: step;
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-muted);
-    z-index: 1;
-  }
+    .card-info {
+      border-color: var(--blue);
+      background: var(--blue-dim);
+    }
 
-  .step-num.resolved {
-    background: var(--green-dim);
-    border-color: var(--green);
-    color: var(--green);
-  }
+    .card-label {
+      font-family: 'Outfit', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
 
-  .step-content { flex: 1; padding-top: 6px; }
+    .label-error { color: var(--red); }
+    .label-success { color: var(--green); }
+    .label-warning { color: var(--yellow); }
+    .label-info { color: var(--blue); }
 
-  .step-title {
-    font-size: 16px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: var(--text);
-  }
+    .highlight-box {
+      background: rgba(63, 185, 80, 0.02);
+      border-left: 4px solid var(--green);
+      padding: 20px;
+      border-radius: 0 12px 12px 0;
+      margin: 24px 0;
+    }
 
-  /* Table */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 16px 0;
-    font-size: 14px;
-  }
+    .highlight-box p {
+      margin: 0;
+      font-size: 14px;
+      color: #94a3b8;
+    }
 
-  th {
-    background: var(--surface2);
-    color: var(--text-muted);
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 10px 16px;
-    text-align: left;
-    border: 1px solid var(--border);
-  }
+    /* Steps */
+    .steps { counter-reset: step; margin: 30px 0; }
 
-  td {
-    padding: 10px 16px;
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-  }
+    .step {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 32px;
+      position: relative;
+    }
 
-  td:first-child { font-family: var(--mono); color: var(--purple); font-size: 13px; }
-  td strong { color: var(--text); }
+    .step::before {
+      content: '';
+      position: absolute;
+      left: 18px;
+      top: 38px;
+      bottom: -20px;
+      width: 1px;
+      background: var(--border-color);
+    }
 
-  /* Summary box */
-  .summary-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-top: 16px;
-  }
+    .step:last-child::before { display: none; }
 
-  @media (max-width: 600px) {
-    .summary-grid { grid-template-columns: 1fr; }
-    .container { padding: 0 20px 60px; }
-    .hero { padding: 40px 20px 36px; }
-    .step { gap: 14px; }
-  }
+    .step-num {
+      counter-increment: step;
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      z-index: 1;
+    }
 
-  .summary-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px 20px;
-  }
+    .step-num.resolved {
+      background: var(--green-dim);
+      border-color: var(--green);
+      color: var(--green);
+    }
 
-  .summary-item .si-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-dim);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
+    .step-content { flex: 1; padding-top: 6px; }
 
-  .summary-item .si-val {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text);
-  }
+    .step-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #fff;
+    }
 
-  /* Final config */
-  .final-config {
-    background: #010409;
-    border: 1px solid var(--green);
-    border-radius: 8px;
-    overflow: hidden;
-  }
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 14px;
+    }
 
-  .final-config-header {
-    background: var(--green-dim);
-    border-bottom: 1px solid var(--green);
-    padding: 10px 20px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--green);
-    letter-spacing: 0.05em;
-  }
+    th {
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text-muted);
+      font-family: 'Outfit', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 12px 16px;
+      text-align: left;
+      border: 1px solid var(--border-color);
+    }
 
-  .final-config pre {
-    background: transparent;
-    border: none;
-    margin: 0;
-    padding: 20px;
-  }
+    td {
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      color: #cbd5e1;
+    }
 
-  /* Divider */
-  hr {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 40px 0;
-  }
+    /* Code Block */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      overflow-x: auto;
+      margin: 24px 0;
+    }
 
-  /* Footer */
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 24px 40px;
-    text-align: center;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text-dim);
-  }
+    code {
+      font-family: 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
+      font-size: 13.5px;
+      color: #cbd5e1;
+    }
 
-  /* Animation */
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+    .post-content p code, .post-content li code {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #f1f5f9;
+    }
 
-  .section { animation: fadeIn 0.5s ease both; }
-  .section:nth-child(2) { animation-delay: 0.1s; }
-  .section:nth-child(3) { animation-delay: 0.2s; }
-  .section:nth-child(4) { animation-delay: 0.3s; }
+    /* Syntax highlight colors */
+    .comment { color: #484f58; }
+    .cmd { color: var(--green); }
+    .val { color: var(--accent-blue); }
 
-  /* TOC */
-  .toc {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px 24px;
-    margin-top: 32px;
-  }
+    /* Language sections */
+    .lang-section {
+      display: none;
+    }
 
-  .toc-title {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 14px;
-  }
+    .lang-section.active {
+      display: block;
+    }
 
-  .toc a {
-    display: block;
-    color: var(--blue);
-    text-decoration: none;
-    font-size: 14px;
-    padding: 4px 0;
-    border-bottom: 1px solid var(--border);
-  }
+    /* Footer */
+    footer {
+      text-align: center;
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 80px;
+      border-top: 1px solid var(--border-color);
+      padding-top: 30px;
+    }
 
-  .toc a:last-child { border-bottom: none; }
-  .toc a:hover { color: var(--text); }
-  .toc a .toc-num { color: var(--text-dim); font-family: var(--mono); font-size: 12px; margin-right: 10px; }
-</style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      body {
+        flex-direction: column;
+      }
+      nav.sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 20px;
+      }
+      main.content-area {
+        margin-left: 0;
+        padding: 20px;
+      }
+    }
+  </style>
 </head>
 <body>
 
-<div class="hero">
-  <div class="hero-inner">
-    <div class="badge">TROUBLESHOOTING GUIDE</div>
-    <h1>
-      <span class="goose">🪿 Goose</span>
-      <span class="arrow">→</span>
-      <span class="ollama">Ollama</span>
-      接続完全ガイド
-    </h1>
-    <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 20px;">
-      Open WebUI経由ではなく、OllamaにGooseを直接接続する際のトラブルシューティング記録
-    </p>
-    <div class="hero-meta">
-      <span>🪿 Goose v1.26.1</span>
-      <span>🐳 Open WebUI</span>
-      <span>🦙 Ollama</span>
-      <span>📅 2026-03-03</span>
+  <!-- Navigation Sidebar -->
+  <nav class="sidebar">
+    <div class="logo-container">
+      <div class="logo-icon">SS</div>
+      <div class="logo-text">Sovereign Systems</div>
     </div>
-  </div>
-</div>
-
-<div class="container">
-
-  <!-- TOC -->
-  <div class="toc">
-    <div class="toc-title">目次</div>
-    <a href="#env"><span class="toc-num">01</span>環境構成</a>
-    <a href="#root-cause"><span class="toc-num">02</span>根本原因</a>
-    <a href="#steps"><span class="toc-num">03</span>解決ステップ詳細</a>
-    <a href="#final"><span class="toc-num">04</span>最終設定</a>
-    <a href="#permanent"><span class="toc-num">05</span>恒久化設定</a>
-    <a href="#lesson"><span class="toc-num">06</span>教訓・まとめ</a>
-  </div>
-
-  <!-- 環境 -->
-  <div class="section" id="env">
-    <div class="section-title">01 — 環境構成</div>
-    <h2>ネットワーク構成</h2>
-    <table>
-      <tr><th>ホスト</th><th>IP</th><th>役割</th><th>備考</th></tr>
-      <tr><td>CLIENT</td><td>192.168.1.x</td><td><strong>Goose実行マシン</strong></td><td>Apple Silicon Mac</td></tr>
-      <tr><td>SERVER</td><td>192.168.1.y</td><td><strong>Ollama / Open WebUI</strong></td><td>大容量RAM Mac</td></tr>
-      <tr><td>PROXY</td><td>192.168.1.z</td><td>liteLLM proxy / n8n</td><td>Apple Silicon Mac</td></tr>
-    </table>
-    <table>
-      <tr><th>サービス</th><th>ポート</th><th>用途</th></tr>
-      <tr><td>Open WebUI</td><td>18789</td><td>Web UI + OpenAI互換API</td></tr>
-      <tr><td>Ollama</td><td>11434</td><td>LLM推論エンジン（直接接続）</td></tr>
-    </table>
-  </div>
-
-  <!-- 根本原因 -->
-  <div class="section" id="root-cause">
-    <div class="section-title">02 — 根本原因</div>
-    <h2>問題の本質</h2>
-
-    <div class="card card-error">
-      <div class="card-label label-error">⚠ PRIMARY CAUSE</div>
-      <strong style="color: var(--text);">Goose v1.26.1 がデフォルトで OpenAI Responses API を使用する</strong>
-      <p style="margin-top: 8px;">
-        Goose 1.26以降、OpenAIの新しい <code>/v1/responses</code> エンドポイントをデフォルトで使用します。
-        Open WebUI はこのエンドポイントを実装していないため、<strong style="color: var(--red);">405 Method Not Allowed</strong> が返り続けます。
-      </p>
+    
+    <div>
+      <div class="menu-title">Technical Logs</div>
+      <ul class="menu-list">
+        <li class="menu-item active" onclick="switchPost(0, this)">
+          <span>🪿</span> Goose → Ollama
+        </li>
+        <li class="menu-item" onclick="switchPost(1, this)">
+          <span>🛠️</span> Local LLM Setup
+        </li>
+        <li class="menu-item" onclick="switchPost(2, this)">
+          <span>📜</span> Project Manifesto
+        </li>
+        <li class="menu-item" onclick="switchPost(3, this)">
+          <span>🎯</span> Milestone 1: Core
+        </li>
+        <li class="menu-item" onclick="switchPost(4, this)">
+          <span>🏷️</span> Release Notes v1.0
+        </li>
+      </ul>
     </div>
 
-    <div class="card card-warning">
-      <div class="card-label label-warning">⚠ SECONDARY CAUSE</div>
-      <strong style="color: var(--text);">Ollamaがデフォルトでlocalhostのみにバインド</strong>
-      <p style="margin-top: 8px;">
-        Ollamaはデフォルトで <code>127.0.0.1:11434</code> しか待ち受けないため、
-        他マシンから直接アクセスできません。<code>OLLAMA_HOST=0.0.0.0:11434</code> の設定が必要です。
-      </p>
+    <div style="margin-top: auto; font-family: 'Outfit', sans-serif; font-size: 11px; color: var(--text-muted);">
+      <div>Host: Tokyo Kugahara</div>
+      <div>Sovereign OS Network</div>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="content-area">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="lang-switcher">
+        <button class="lang-btn active" id="btn-ja" onclick="switchLanguage('ja')">日本語</button>
+        <button class="lang-btn" id="btn-en" onclick="switchLanguage('en')">English</button>
+      </div>
     </div>
 
-    <h3>// エラーの変遷</h3>
-    <table>
-      <tr><th>エラー</th><th>原因</th><th>状態</th></tr>
-      <tr><td>401 Unauthorized</td><td>JWTトークン期限切れ / キー未設定</td><td style="color: var(--green);">解決</td></tr>
-      <tr><td>JSON parse error</td><td>OPENAI_BASE_PATHが <code>api/chat/completions</code>（重複）</td><td style="color: var(--green);">解決</td></tr>
-      <tr><td>405 Method Not Allowed</td><td>Responses API非対応 + OllamaへのURL誤り</td><td style="color: var(--green);">解決</td></tr>
-      <tr><td>Connection refused</td><td>Ollamaがlocalホストのみバインド</td><td style="color: var(--green);">解決</td></tr>
-    </table>
-  </div>
+    <!-- POST 0: GOOSE TO OLLAMA -->
+    <article id="post-0" class="post-card active">
+      <div class="meta-info">
+        <span>2026-03-03</span>
+        <span class="tag">Goose</span>
+        <span class="tag">Ollama</span>
+        <span class="tag">Troubleshooting</span>
+      </div>
 
-  <!-- ステップ -->
-  <div class="section" id="steps">
-    <div class="section-title">03 — 解決ステップ詳細</div>
-    <h2>トラブルシューティングの流れ</h2>
+      <!-- JA -->
+      <div class="lang-section ja active">
+        <h1 class="post-title">Goose → Ollama 接続完全ガイド</h1>
+        <div class="post-content">
+          <p>Open WebUI経由ではなく、OllamaにGooseを直接接続する際のトラブルシューティング記録です。</p>
 
-    <div class="steps">
+          <h2>1. 環境構成</h2>
+          <table>
+            <thead>
+              <tr><th>ホスト</th><th>IP</th><th>役割</th><th>備考</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>CLIENT</td><td>192.168.1.x</td><td>Goose実行マシン</td><td>Apple Silicon Mac</td></tr>
+              <tr><td>SERVER</td><td>192.168.1.y</td><td>Ollama / Open WebUI</td><td>大容量RAM Mac</td></tr>
+              <tr><td>PROXY</td><td>192.168.1.z</td><td>liteLLM proxy / n8n</td><td>Apple Silicon Mac</td></tr>
+            </tbody>
+          </table>
+          
+          <table>
+            <thead>
+              <tr><th>サービス</th><th>ポート</th><th>用途</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Open WebUI</td><td>18789</td><td>Web UI + OpenAI互換API</td></tr>
+              <tr><td>Ollama</td><td>11434</td><td>LLM推論エンジン（直接接続）</td></tr>
+            </tbody>
+          </table>
 
-      <div class="step">
-        <div class="step-num resolved">1</div>
-        <div class="step-content">
-          <div class="step-title">Open WebUI APIキーの取得</div>
-          <p>Open WebUIのアカウント画面にAPIキーセクションが表示されない場合、Admin設定で有効化が必要。</p>
-          <pre><span class="comment"># Admin Panel → Settings → General → Enable API Keys をON</span>
+          <h2>2. 根本原因</h2>
+          <div class="card card-error">
+            <div class="card-label label-error">⚠ 主要原因 (PRIMARY CAUSE)</div>
+            <strong>Goose v1.26.1 がデフォルトで OpenAI Responses API を使用する</strong>
+            <p style="margin-top: 8px;">
+              Goose 1.26以降、OpenAIの新しい <code>/v1/responses</code> エンドポイントをデフォルトで使用します。Open WebUI はこのエンドポイントを実装していないため、<strong>405 Method Not Allowed</strong> が返り続けます。
+            </p>
+          </div>
 
+          <div class="card card-warning">
+            <div class="card-label label-warning">⚠ 二次的要因 (SECONDARY CAUSE)</div>
+            <strong>Ollamaがデフォルトでlocalhostのみにバインド</strong>
+            <p style="margin-top: 8px;">
+              Ollamaはデフォルトで <code>127.0.0.1:11434</code> しか待ち受けないため、他マシンから直接アクセスできません。<code>OLLAMA_HOST=0.0.0.0:11434</code> の設定が必要です。
+            </p>
+          </div>
+
+          <h2>3. 解決ステップ詳細</h2>
+          <div class="steps">
+            <div class="step">
+              <div class="step-num resolved">1</div>
+              <div class="step-content">
+                <div class="step-title">Open WebUI APIキーの取得</div>
+                <p>Open WebUIのアカウント画面にAPIキーセクションが表示されない場合、Admin設定で有効化が必要。</p>
+                <pre><span class="comment"># Admin Panel → Settings → General → Enable API Keys をON</span>
 <span class="comment"># APIキー発行UIが動作しない場合、サインインAPIで直接JWTを取得</span>
 <span class="cmd">curl</span> -X POST http://192.168.1.y:18789/api/v1/auths/signin \
   -H <span class="val">"Content-Type: application/json"</span> \
-  -d <span class="val">'{"email":"<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="21584e545361444c40484d0f424e4c">[email&#160;protected]</a>","password":"yourpassword"}'</span>
+  -d <span class="val">'{"email":"user@example.com","password":"yourpassword"}'</span></pre>
+              </div>
+            </div>
 
-<span class="comment"># レスポンスの "token" フィールドを取得
-# "expires_at": null → 無期限トークン
-# "api_keys": false → ここが原因でAPIキー作成UIが機能しない</span></pre>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num resolved">2</div>
-        <div class="step-content">
-          <div class="step-title">Gooseの設定 — OPENAI_BASE_PATH の修正</div>
-          <p>Gooseは <code>OPENAI_HOST + OPENAI_BASE_PATH + /chat/completions</code> でURLを組み立てます。</p>
-          <pre><span class="comment"># ❌ 誤り — URLが二重になる</span>
+            <div class="step">
+              <div class="step-num resolved">2</div>
+              <div class="step-content">
+                <div class="step-title">Gooseの設定 — OPENAI_BASE_PATH の修正</div>
+                <p>Gooseは <code>OPENAI_HOST + OPENAI_BASE_PATH + /chat/completions</code> でURLを組み立てます。</p>
+                <pre><span class="comment"># ❌ 誤り — URLが二重になる</span>
 OPENAI_BASE_PATH: api/chat/completions
-<span class="comment"># → http://host/api/chat/completions/chat/completions</span>
 
 <span class="comment"># ✅ 正しい</span>
-OPENAI_BASE_PATH: /api/v1
-<span class="comment"># → http://host/api/v1/chat/completions</span></pre>
-        </div>
-      </div>
+OPENAI_BASE_PATH: /api/v1</pre>
+              </div>
+            </div>
 
-      <div class="step">
-        <div class="step-num resolved">3</div>
-        <div class="step-content">
-          <div class="step-title">curl で接続確認</div>
-          <p>Gooseに任せる前に、必ずcurlでエンドポイントが正常か確認する。</p>
-          <pre><span class="comment"># モデル一覧確認</span>
-<span class="cmd">curl</span> http://192.168.1.y:18789/api/v1/models \
-  -H <span class="val">"Authorization: Bearer YOUR_TOKEN"</span>
-
-<span class="comment"># Chat completions 確認</span>
-<span class="cmd">curl</span> -X POST http://192.168.1.y:18789/api/v1/chat/completions \
-  -H <span class="val">"Content-Type: application/json"</span> \
-  -H <span class="val">"Authorization: Bearer YOUR_TOKEN"</span> \
-  -d <span class="val">'{"model":"qwen2.5:7b-instruct","messages":[{"role":"user","content":"hi"}]}'</span>
-
-<span class="comment"># ✅ curlは成功 → Goose側の問題と確定</span></pre>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num resolved">4</div>
-        <div class="step-content">
-          <div class="step-title">Goose v1.26.1 の Responses API 問題を迂回</div>
-          <p><strong>Goose v1.26以降はOpenAI Responses APIをデフォルト使用</strong>。Open WebUIは未対応のため405エラーが出続ける。<br>
-          解決策：GooseプロバイダーをOpenAIからOllamaに切り替える。</p>
-          <pre><span class="comment"># goose configure → Ollama を選択</span>
-<span class="comment"># または config.yaml を直接編集</span>
-
-<span class="comment"># ❌ 削除する設定</span>
-GOOSE_PROVIDER: openai
-OPENAI_HOST: http://192.168.1.y:18789
-OPENAI_BASE_PATH: /api/v1
-OPENAI_API_KEY: sk-...
-
+            <div class="step">
+              <div class="step-num resolved">3</div>
+              <div class="step-content">
+                <div class="step-title">Goose v1.26.1 の Responses API 問題を迂回</div>
+                <p>プロバイダーをOpenAIからOllamaに切り替えます。</p>
+                <pre><span class="comment"># config.yaml を直接編集</span>
 <span class="comment"># ✅ 追加する設定</span>
 GOOSE_PROVIDER: ollama
 GOOSE_MODEL: qwen2.5:7b-instruct
 OLLAMA_HOST: http://192.168.1.y:11434</pre>
-        </div>
-      </div>
+              </div>
+            </div>
 
-      <div class="step">
-        <div class="step-num resolved">5</div>
-        <div class="step-content">
-          <div class="step-title">NRT Ollama のネットワーク公開</div>
-          <p>Ollamaはデフォルトでlocalホストのみバインド。外部マシンからアクセスするには <code>0.0.0.0</code> へのバインドが必要。</p>
-          <pre><span class="comment"># SERVER側で実行</span>
-
-<span class="comment"># launchctlへの環境変数設定（再起動後も有効）</span>
-<span class="cmd">launchctl</span> setenv OLLAMA_HOST 0.0.0.0:11434
-<span class="cmd">brew</span> services restart ollama
-
-<span class="comment"># すぐに動作確認したい場合はフォアグラウンド起動</span>
-<span class="cmd">brew</span> services stop ollama
-<span class="val">OLLAMA_HOST=0.0.0.0:11434</span> ollama serve &
-
-<span class="comment"># CLIENTから確認</span>
-<span class="cmd">curl</span> http://192.168.1.y:11434/api/tags
-<span class="comment"># → モデル一覧JSONが返れば成功</span></pre>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num resolved">6</div>
-        <div class="step-content">
-          <div class="step-title">環境変数の残留に注意</div>
-          <p>以前に <code>export OPENAI_API_KEY="unused"</code> などを実行していた場合、config.yamlの設定を上書きしてしまう。</p>
-          <pre><span class="comment"># 確認コマンド</span>
-<span class="cmd">echo</span> $OPENAI_API_KEY
-<span class="cmd">grep</span> -i "openai\|goose" ~/.zshrc ~/.zprofile
-
-<span class="comment"># 解決策：ターミナルを完全に閉じて新しいセッションで起動</span>
-<span class="comment"># または unset で明示的に削除</span>
-<span class="cmd">unset</span> OPENAI_API_KEY
-<span class="cmd">unset</span> OPENAI_BASE_URL</pre>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- 最終設定 -->
-  <div class="section" id="final">
-    <div class="section-title">04 — 最終設定</div>
-    <h2>動作確認済み config.yaml</h2>
-    <p>CLIENT（192.168.1.x）の <code>~/.config/goose/config.yaml</code></p>
-
-    <div class="final-config">
-      <div class="final-config-header">~/.config/goose/config.yaml</div>
-      <pre><span class="comment"># Provider</span>
-<span class="val">GOOSE_PROVIDER</span>: ollama
-<span class="val">GOOSE_MODEL</span>: qwen2.5:7b-instruct
-
-<span class="comment"># Ollama on NRT</span>
-<span class="val">OLLAMA_HOST</span>: http://192.168.1.y:11434
-<span class="val">OLLAMA_TIMEOUT</span>: <span class="val">'600'</span>
-
-<span class="comment"># Telemetry</span>
-<span class="val">GOOSE_TELEMETRY_ENABLED</span>: false
-
-<span class="comment"># Extensions (省略)</span>
-extensions:
-  ...</pre>
-    </div>
-  </div>
-
-  <!-- 恒久化 -->
-  <div class="section" id="permanent">
-    <div class="section-title">05 — 恒久化設定</div>
-    <h2>SERVER再起動後も Ollama を外部公開し続ける</h2>
-
-    <div class="card card-warning">
-      <div class="card-label label-warning">⚠ 注意</div>
-      <p style="margin-top: 0;"><code>~/.zshrc</code> への <code>export OLLAMA_HOST</code> 追記は <strong style="color: var(--text);">launchd サービスには効きません</strong>。launchctlで設定するか、plistを編集する必要があります。</p>
-    </div>
-
-    <h3>// 方法1: launchctl（推奨）</h3>
-    <pre><span class="comment"># SERVER側で実行</span>
+            <div class="step">
+              <div class="step-num resolved">4</div>
+              <div class="step-content">
+                <div class="step-title">NRT Ollama のネットワーク公開</div>
+                <p>外部マシンからアクセスするには <code>0.0.0.0</code> へのバインドが必要。</p>
+                <pre><span class="comment"># SERVER側で実行（再起動後も有効）</span>
 <span class="cmd">launchctl</span> setenv OLLAMA_HOST 0.0.0.0:11434
 <span class="cmd">brew</span> services restart ollama</pre>
+              </div>
+            </div>
+          </div>
 
-    <h3>// 方法2: plist 編集</h3>
-    <pre><span class="comment"># homebrew.mxcl.ollama.plist を編集</span>
-nano ~/Library/LaunchAgents/homebrew.mxcl.ollama.plist
-
-<span class="comment"># EnvironmentVariables を追加</span>
-&lt;key&gt;EnvironmentVariables&lt;/key&gt;
-&lt;dict&gt;
-  &lt;key&gt;OLLAMA_HOST&lt;/key&gt;
-  &lt;string&gt;0.0.0.0:11434&lt;/string&gt;
-&lt;/dict&gt;</pre>
-  </div>
-
-  <!-- 教訓 -->
-  <div class="section" id="lesson">
-    <div class="section-title">06 — 教訓・まとめ</div>
-    <h2>Key Takeaways</h2>
-
-    <div class="summary-grid">
-      <div class="summary-item">
-        <div class="si-label">根本原因</div>
-        <div class="si-val">Goose v1.26+ の Responses API 非互換</div>
+          <h2>4. 最終設定</h2>
+          <pre><span class="comment"># ~/.config/goose/config.yaml</span>
+GOOSE_PROVIDER: ollama
+GOOSE_MODEL: qwen2.5:7b-instruct
+OLLAMA_HOST: http://192.168.1.y:11434
+OLLAMA_TIMEOUT: '600'
+GOOSE_TELEMETRY_ENABLED: false</pre>
+        </div>
       </div>
-      <div class="summary-item">
-        <div class="si-label">解決策</div>
-        <div class="si-val">OpenAI → Ollama プロバイダーへ切り替え</div>
+
+      <!-- EN -->
+      <div class="lang-section en">
+        <h1 class="post-title">Goose to Ollama Connection Guide</h1>
+        <div class="post-content">
+          <p><em>This troubleshooting guide is only available in Japanese. Please switch the language to 日本語 (Japanese) using the toggle in the top-right corner to view the guide.</em></p>
+        </div>
       </div>
-      <div class="summary-item">
-        <div class="si-label">Ollama設定</div>
-        <div class="si-val">OLLAMA_HOST=0.0.0.0:11434 で外部公開</div>
+    </article>
+
+    <!-- POST 1: LOCAL LLM GATEWAY SETUP -->
+    <article id="post-1" class="post-card">
+      <div class="meta-info">
+        <span>2026-05-29</span>
+        <span class="tag">Local LLM</span>
+        <span class="tag">macOS</span>
+        <span class="tag">llama.cpp</span>
       </div>
-      <div class="summary-item">
-        <div class="si-label">診断ツール</div>
-        <div class="si-val">curl -v で接続確認してからGooseを設定</div>
+
+      <!-- JA -->
+      <div class="lang-section ja active">
+        <h1 class="post-title">Mac Studio M2 Max (32GB)でローカルLLM 3基をオンデマンド切り替え並行運用する極上環境の構築</h1>
+        <div class="post-content">
+          <p>高性能なオープンソースモデルが毎月のように登場しています。しかし、限られた物理メモリ環境で複数の高性能モデル（Q8_0などの高品質量子化）を同時に動かそうとすると、メモリプレッシャーの増大やVRAM溢れによる速度低下、最悪の場合はクラッシュに直面します。</p>
+          <p>本稿では、メモリが32GBであるMac Studio（M2 Max）において、<strong>Gemma 4 E4B (7.5B)</strong>、<strong>Qwen 2.5 (14B)</strong>、<strong>Phi-4 (14B)</strong> という3つの超強力なモデル（すべて最高精度のQ8_0量子化）を別々のブラウザに割り当てつつ、VRAMの衝突を避けてオンデマンドで自動切り替えするAPIゲートウェイアーキテクチャの構築ログを紹介します。</p>
+
+          <h2>1. 課題：38.6 GB のメモリ要求と32GBの物理制限</h2>
+          <p>今回ローカル環境にロードしたモデルと、それぞれのメモリ（VRAM）占有量は以下の通りです：</p>
+          <ul>
+            <li><strong>Gemma 4 E4B Q8_0</strong>: 約 8.2 GB</li>
+            <li><strong>Qwen 2.5 14B Q8_0</strong>: 約 15.2 GB</li>
+            <li><strong>Phi-4 14B Q8_0</strong>: 約 15.2 GB</li>
+          </ul>
+          <p>合計すると <strong>約 38.6 GB</strong> となり、Mac Studioの物理メモリ（32GB）、およびMetal GPUへのメモリ割当上限（約 21.8 GB）を大きくオーバーします。何も工夫せずに3つ同時にプロセスを立ち上げると、GPUアロケーションがエラーとなるか、SSDへのスワップアウトにより処理速度が1トークン/秒以下に激落ちします。</p>
+          <p>そこで、「**複数のブラウザを同時に使って対話することはない**」という自分自身の利用スタイルに注目し、リクエストのあったモデルだけをGPUに読み込み、不要なモデルを即座に解放する動的ライフサイクル管理を構築しました。</p>
+
+          <h2>2. アーキテクチャ：APIゲートウェイによる自動ライフサイクル制御</h2>
+          <p>仕組みはシンプルですが、極めて強力です。ポート <code>11430</code> で待機する軽量なPythonプロキシゲートウェイを自作し、OS起動時のバックグラウンドサービス（LaunchAgent）として登録しました。</p>
+          <p>このゲートウェイが、各ブラウザのPage Assist拡張機能から送られてくるリクエストに含まれる <code>"model"</code> フィールドを解析し、macOSのサービス管理コマンドである <code>launchctl</code> を用いて裏側でロード・アンロードを自動実行します。</p>
+
+          <div class="highlight-box">
+            <p><strong>自動スイッチングの流れ：</strong><br>
+            Brave（Gemma 4を要求）からリクエストが到着 ➡️ ゲートウェイがQwenやPhi-4のサービスを <code>launchctl unload</code> で即座に終了（VRAMを全開放） ➡️ Gemma 4 の plist を <code>launchctl load` して起動。
+            </p>
+          </div>
+
+          <h2>3. ローカル起動を滑らかにする「/health」ポーリング</h2>
+          <p><code>llama-server</code> はポートをリスンしてからモデルのテンソル（重み）をロードし終わるまでに少し時間がかかります。ポートが接続可能になったからといってすぐにプロキシを始めると、ブラウザ側に <code>503 Loading model</code> エラーが返されてしまいます。</p>
+          <p>これを防ぐため、ゲートウェイ内でターゲットプロセスの <code>/health</code> エンドポイントを 200ms ごとにポーリングし、レスポンスが <code>{"status":"ok"}</code> (HTTP 200) になるまでクライアントからのリクエストを待機（保留）させる処理を実装しました。</p>
+          <p>これにより、モデルの切り替え（SSDからVRAMへの15GBの読込）にかかる **約10秒間** を安全に待機させ、ロードが完了した瞬間にシームレスにチャットが開始される体験を実現しました。</p>
+
+          <h2>4. 黙読と同期する「readline()」ストリーミング最適化</h2>
+          <p>構築の過程で、Page Assistへの文字出力が数秒おきに表示される「カクカク現象」に直面しました。調査の結果、Pythonプロキシがバックエンドからのレスポンスを <code>response.read(8192)</code> で大きなバッファサイズごとに読み込んでいたことが原因と判明しました。</p>
+          <p>ストリーミングAPI（SSE）は1行（1トークン）ごとにデータを送信するため、コードを <code>response.readline()</code> による「1行ごとの即時読み出し＆即時フラッシュ（wfile.flush）」に書き換えました。結果、AIが文字を出力したその瞬間に遅延なくブラウザに反映され、**自分が黙読するのとちょうど同じスピード（毎秒22〜47文字）でスラスラと出力される滑らかな環境**へと進化しました。</p>
+
+          <h2>5. 成果とまとめ</h2>
+          <p>このオーダーメイド環境により、以下の完璧なマルチブラウザ使い分けが実現しました：</p>
+          <ul>
+            <li><strong>Brave (ポート 11430 / model.gguf)</strong>: Gemma 4 Q8_0 が爆速で機能（~47 tokens/s）</li>
+            <li><strong>Chrome (ポート 11430 / Qwen2.5)</strong>: Qwen 2.5 14B Q8_0 が高度な日本語で対話（~25 tokens/s）</li>
+            <li><strong>Safari (ポート 11430 / phi-4)</strong>: スタンドアロンHTMLから Phi-4 14B Q8_0 を論理思考用に使用（~22 tokens/s）</li>
+          </ul>
+        </div>
       </div>
-    </div>
 
-    <h3>// モデル使い分けの指針</h3>
-    <table>
-      <tr><th>用途</th><th>推奨</th><th>理由</th></tr>
-      <tr><td>技術トラブルシュート</td><td><strong>Claude</strong></td><td>論理的推論・正確な情報</td></tr>
-      <tr><td>大量文書処理・OCR整理</td><td><strong>Gemini</strong></td><td>100万トークンの文脈窓</td></tr>
-      <tr><td>プライベートデータ処理</td><td><strong>ローカルLLM (qwen2.5等)</strong></td><td>コスト0・オフライン</td></tr>
-      <tr><td>コスト重視の単純タスク</td><td><strong>ローカルLLM</strong></td><td>無制限に叩ける</td></tr>
-    </table>
+      <!-- EN -->
+      <div class="lang-section en">
+        <h1 class="post-title">Building a Premium On-Demand Multi-LLM Environment on Mac Studio M2 Max (32GB) with Native llama.cpp</h1>
+        <div class="post-content">
+          <p>This post details the architecture and implementation of a custom API gateway on a Mac Studio M2 Max (32GB RAM) designed to concurrently serve three powerful models—**Gemma 4 E4B (7.5B)**, **Qwen 2.5 (14B)**, and **Phi-4 (14B)** in full Q8_0 precision—automatically swapping them in and out of VRAM on-demand based on browser-specific routing.</p>
 
-    <div class="card card-info" style="margin-top: 24px;">
-      <div class="card-label label-info">💡 DEBUGGING TIP</div>
-      <p style="margin-top: 0;">GooseやAIクライアントの設定で詰まったら、まず <strong style="color: var(--text);">curl で直接エンドポイントを叩いて接続確認</strong>する。curlが通るかどうかで「ネットワーク・認証の問題」と「クライアント設定の問題」を切り分けられる。</p>
-    </div>
-  </div>
+          <h2>1. The Challenge: 38.6 GB Memory Request vs. 32GB Physical Limit</h2>
+          <p>Here are the VRAM/RAM footprints of the models loaded in our environment:</p>
+          <ul>
+            <li><strong>Gemma 4 E4B Q8_0</strong>: ~8.2 GB</li>
+            <li><strong>Qwen 2.5 14B Q8_0</strong>: ~15.2 GB</li>
+            <li><strong>Phi-4 14B Q8_0</strong>: ~15.2 GB</li>
+          </ul>
+          <p>The total allocation is <strong>~38.6 GB</strong>, which exceeds the physical 32GB RAM of the system and the ~21.8 GB Metal VRAM allocation budget. Running all three servers concurrently triggers GPU out-of-memory errors or aggressive SSD swapping, reducing speed to less than 1 token/second.</p>
+          <p>Since we only type in one browser at any given moment, we realized we don't need these models loaded simultaneously. The optimal solution was to dynamically load the requested model into VRAM and immediately unload inactive ones when switching contexts.</p>
 
-</div>
+          <h2>2. The Architecture: Automatic Lifecycle Control via API Gateway</h2>
+          <p>We built a lightweight Python API Gateway proxy running on port <code>11430</code>, registered as a macOS LaunchAgent to run continuously in the background.</p>
+          <p>When a browser's Page Assist extension sends a chat completion request, the gateway inspects the <code>"model"</code> parameter in the HTTP payload. It then invokes macOS's native service controller (<code>launchctl</code>) to swap the model daemons in the background:</p>
 
-<foo
+          <div class="highlight-box">
+            <p><strong>The Switching Logic:</strong><br>
+            A request from Brave (targeting Gemma 4) arrives ➡️ The gateway calls <code>launchctl unload</code> on Qwen and Phi-4 services (freeing up to 30 GB VRAM instantly) ➡️ Calls <code>launchctl load</code> on the Gemma 4 service.
+            </p>
+          </div>
+
+          <h2>3. Smooth Warm-up with "/health" Polling</h2>
+          <p>At startup, <code>llama-server</code> immediately opens its network port, but is not ready to serve requests until it completes loading the weights into memory. Forwarding the API call prematurely results in a <code>503 Loading model</code> error.</p>
+          <p>To solve this, the gateway polls the target server's <code>/health</code> endpoint every 200ms. It intercepts and holds the client's request until the endpoint returns <code>{"status":"ok"}</code> (HTTP 200).</p>
+          <p>This allows the ~10-second model loading phase (moving 15 GB from the fast internal SSD to VRAM) to resolve safely and transparently, resuming the chat stream seamlessly once the model is fully initialized.</p>
+
+          <h2>4. "readline()" Streaming Optimization for Real-Time Flow</h2>
+          <p>During initial testing, the text output in the browser popped in in large, stuttering chunks every few seconds. We traced this to the gateway's proxy loop, which read the upstream socket response in large blocks via <code>response.read(8192)</code>.</p>
+          <p>Since Server-Sent Events (SSE) stream text line-by-line, we rewrote the reading loop to use <code>response.readline()</code>, flushing immediately with <code>self.wfile.flush()</code>. This bypassed any internal buffering and routed every generated token directly to the browser in real-time. The text now flows smoothly and fluidly at 22-47 tokens/sec, matching the user's natural silent reading speed.</p>
+
+          <h2>5. Results and Summary</h2>
+          <p>This tailored, Docker-free local AI environment runs cleanly with maximum Apple Silicon hardware acceleration:</p>
+          <ul>
+            <li><strong>Brave (Port 11430 / model.gguf)</strong>: Dedicated to Gemma 4 Q8_0 for ultra-fast general queries (~47 tokens/s).</li>
+            <li><strong>Chrome (Port 11430 / Qwen 2.5)</strong>: Dedicated to Qwen 2.5 14B Q8_0 for nuanced Japanese tasks (~25 tokens/s).</li>
+            <li><strong>Safari (Port 11430 / phi-4)</strong>: Accessing Phi-4 14B Q8_0 via a standalone web page for programming and logic tasks (~22 tokens/s).</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- POST 2: PROJECT MANIFESTO -->
+    <article id="post-2" class="post-card">
+      <div class="meta-info">
+        <span>2026-05-08</span>
+        <span class="tag">Manifesto</span>
+        <span class="tag">Causa</span>
+        <span class="tag">Determinism</span>
+      </div>
+
+      <!-- JA -->
+      <div class="lang-section ja active">
+        <h1 class="post-title">プロジェクト・マニフェスト: Anchor LLM & Anchor DB (Causa) v1.0</h1>
+        <div class="post-content">
+          <h2>1. コア・フィロソフィー (核心となる思想)</h2>
+          <p>本プロジェクトの根本的な目標は、LLMの持つ<strong>「非決定的（確定的でない）」</strong>な性質を、OS操作における**「決定論的（100%再現可能）」**な実行エンジンへと変換することにあります。</p>
+          <p>私たちは、ユーザーの**「Enterキー」**の打鍵を、因果関係の究極 of アンカーポイント（錨）と定義します。従来のベクトルデータベースが「セマンティックな類似性」に焦点を当てるのに対し、**Anchor DB（Causa）**は、人間が承認した過去のアクションを凍結し、自律的なOS運用における信頼性、速度、安全性を担保する**「判例エンジン」**として機能します。</p>
+
+          <h2>2. システムアーキテクチャ</h2>
+          <h3>A. Anchor LLM (パイロット)</h3>
+          <ul>
+            <li><strong>役割</strong>: OS操作の計画 and 実行判断に特化した専門知能（OS-WorldやOS-Copilotの構造を継承）。</li>
+            <li><strong>プロトコル</strong>: 推論を開始する前に、必ず現在の画面状態（アクセシビリティツリー/スクリーンショット）をスキャンし、Anchor DBに同一の判例が存在しないかをクエリします。AIの提案は、常に人間が承認した歴史的事実（データベース）の下位に位置します。</li>
+          </ul>
+
+          <h3>B. Anchor DB (土台 / "Causa")</h3>
+          <ul>
+            <li><strong>物理構成</strong>: 300TB NAS (データレイク) + SQLite (メタデータインデックス)</li>
+            <li><strong>因果の連鎖（スキーマ設計）</strong>:
+              <ol>
+                <li><strong>UI Snapshot</strong>: AX Treeの構造データ + 画像ハッシュ（観測された状態の証拠）</li>
+                <li><strong>User Intent</strong>: 指揮官（人間）によって定義された具体的な目標</li>
+                <li><strong>LLM Proposal</strong>: AIが生成したアクションシーケンス</li>
+                <li><strong>The Anchor (承認)</strong>: 人間が「Enter」を押して承認したという事実（決定的な因果の結合）</li>
+                <li><strong>Outcome Evidence</strong>: 実行後の画面状態と、成功/失敗の検証結果</li>
+              </ol>
+            </li>
+          </ul>
+
+          <h3>C. Anchor Engine (実行部隊)</h3>
+          <ul>
+            <li><strong>ワークフロー</strong>: Difyを介して統合され、Apple Silicon Mac上で実行されます。</li>
+            <li><strong>リスクガバナンス</strong>: 5段階のリスク分類を導入。**リスク3以上**（削除、資金移動、データのエクスポート）に分類される操作は、たとえ過去に全く同じ判例があっても、必ず「ヒューマン・アンカー（人間の手動再承認）」を要求します。</li>
+          </ul>
+
+          <h2>3. 実装ドグマ (実装上の戒律)</h2>
+          <ol>
+            <li><strong>決定論ファースト（Deterministic First）</strong><br>
+            「同一のUI指紋」「同一のビジネスオブジェクトID」「同一アクションのハッシュ値」「過去の承認」「過去の実行成功」がすべて満たされた場合に限り、LLMの推論をバイパスしてミリ秒単位で過去の操作をリプレイ（自動実行）します。<br>
+            ※ただし、マイルストーン1段階では、自動実行は行わず「リプレイ候補（replay_candidate）」の判定を生成するのみに留めます。</li>
+            <li><strong>判例インジェクション（Precedent Injection）</strong><br>
+            推論を始める際、AIにゼロから思考させるのではなく、プロンプトに「過去の自分の実行履歴」をコンテキストとして注入（想起）させます。</li>
+            <li><strong>厳格な分離（Strict Decoupling）</strong><br>
+            「提案レイヤー（LLM）」と「承認ポリシーレイヤー（DB/人間）」を物理的に分離します。LLM自身が自分の危険なアクションを自分で承認することは決して許されません。</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- EN -->
+      <div class="lang-section en">
+        <h1 class="post-title">Project Manifesto: Anchor LLM & Anchor DB (Causa) v1.0</h1>
+        <div class="post-content">
+          <h2>1. Core Philosophy</h2>
+          <p>The fundamental goal of this project is to transform the **"Non-deterministic"** nature of LLMs into a **"Deterministic"** execution engine for OS operations.</p>
+          <p>We define the user's **"Enter"** key stroke as the ultimate anchor point of causality. While traditional Vector DBs focus on "semantic similarity," the **Anchor DB** serves as a **"Precedent Engine,"** freezing human-approved actions to ensure reliability, speed, and safety in autonomous OS operations.</p>
+
+          <h2>2. System Architecture</h2>
+          <h3>A. Anchor LLM (The Pilot)</h3>
+          <ul>
+            <li><strong>Role</strong>: A specialized intelligence (inheriting structures from OS-World/OS-Copilot) that plans and judges OS operations.</li>
+            <li><strong>Protocol</strong>: Always scan the screen state (AX Tree/Screenshot) and query the Anchor DB for existing precedents before reasoning. The LLM proposal must remain subservient to human-approved historical truth.</li>
+          </ul>
+
+          <h3>B. Anchor DB (The Foundation / "Causa")</h3>
+          <ul>
+            <li><strong>Physical realization</strong>: 300TB NAS (Data Lake) + SQLite (Metadata Index).</li>
+            <li><strong>The Chain of Causality Schema</strong>:
+              <ol>
+                <li><strong>UI Snapshot</strong>: AX Tree JSON + Image Hash (Observed State Evidence).</li>
+                <li><strong>User Intent</strong>: The specific objective defined by the Sovereign Commander.</li>
+                <li><strong>LLM Proposal</strong>: The action sequence generated by the AI.</li>
+                <li><strong>The Anchor (Approval)</strong>: The fact that a human pressed "Enter" (The definitive causality link).</li>
+                <li><strong>Outcome Evidence</strong>: Post-execution state and verification of success/failure.</li>
+              </ol>
+            </li>
+          </ul>
+
+          <h3>C. Anchor Engine (The Executor)</h3>
+          <ul>
+            <li><strong>Workflow</strong>: Orchestrated via Dify (Neuro-link) and executed on M4/M2 Mac.</li>
+            <li><strong>Risk Governance</strong>: Implement a 5-tier risk classification. Operations categorized as **Risk 3 or higher** (Deletion, Financial Transaction, Data Export) strictly require a **"Human Anchor" (Re-approval)** even if a precedent exists.</li>
+          </ul>
+
+          <h2>3. Implementation Dogmas</h2>
+          <ol>
+            <li><strong>Deterministic First</strong>: Bypass LLM inference and execute within milliseconds *only* when UI fingerprint, business object identity, action payload hash, prior human approval, and prior success evidence are all verified. In Milestone 1, this only produces a `replay_candidate` decision without autonomous execution.</li>
+            <li><strong>Precedent Injection</strong>: Inject "Past Self" contexts into the prompt before the LLM begins reasoning. Do not let the LLM "think" from scratch; let it "remember."</li>
+            <li><strong>Strict Decoupling</strong>: Separate the Proposal Layer (LLM) from the Policy/Approval Layer (DB/Human). An LLM must never self-approve its own risky actions.</li>
+          </ol>
+        </div>
+      </div>
+    </article>
+
+    <!-- POST 3: MILESTONE 1 -->
+    <article id="post-3" class="post-card">
+      <div class="meta-info">
+        <span>2026-05-08</span>
+        <span class="tag">Design</span>
+        <span class="tag">Milestone</span>
+        <span class="tag">SQL Schema</span>
+      </div>
+
+      <!-- JA -->
+      <div class="lang-section ja active">
+        <h1 class="post-title">マイルストーン 1: Causa Core 設計と仕様</h1>
+        <div class="post-content">
+          <p>本マニュアルは、因果関係データベース「Causa（Anchor DB）」における、最初の安全な実装境界（マイルストーン1）を定義します。本層はロジックおよびデータ定義のみを扱い、直接的なOS実行や破壊的な操作は一切行わない安全な設計となっています。</p>
+
+          <h2>1. SQLite スキーマ設計 (Schema Design)</h2>
+          <p>因果の連鎖を正確にトラッキングするため、以下の7つのテーブル構造をSQLite上に定義します：</p>
+          <pre><code>CREATE TABLE AnchorCase (
+    id TEXT PRIMARY KEY,
+    user_intent TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE UISnapshot (
+    id TEXT PRIMARY KEY,
+    anchor_case_id TEXT NOT NULL,
+    ax_tree_json TEXT NOT NULL,
+    image_hash TEXT NOT NULL,
+    FOREIGN KEY(anchor_case_id) REFERENCES AnchorCase(id)
+);
+
+CREATE TABLE LLMProposal (
+    id TEXT PRIMARY KEY,
+    anchor_case_id TEXT NOT NULL,
+    action_sequence TEXT NOT NULL,
+    risk_level INTEGER NOT NULL,
+    FOREIGN KEY(anchor_case_id) REFERENCES AnchorCase(id)
+);
+
+CREATE TABLE HumanApproval (
+    id TEXT PRIMARY KEY,
+    llm_proposal_id TEXT NOT NULL,
+    approved_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(llm_proposal_id) REFERENCES LLMProposal(id)
+);
+
+CREATE TABLE OutcomeEvidence (
+    id TEXT PRIMARY KEY,
+    execution_event_id TEXT NOT NULL,
+    success BOOLEAN NOT NULL,
+    post_execution_state TEXT,
+    FOREIGN KEY(execution_event_id) REFERENCES ExecutionEvent(id)
+);</code></pre>
+
+          <h2>2. 決定論的リプレイ判定ルール (Replay Eligibility Rules)</h2>
+          <p>過去の判例データ（Precedent）が、再び自動実行可能（<code>replay_candidate</code>）と判定されるには、以下の条件を**すべて**満たす必要があります：</p>
+          <ul>
+            <li>現在のUIスナップショットが、過去のUI指紋と完全に一致すること。</li>
+            <li>ビジネスオブジェクトの同一性が検証されていること。</li>
+            <li>アクションのペイロードハッシュが完全に一致すること。</li>
+            <li>過去に人間の承認（HumanApproval）が存在すること。</li>
+            <li>過去の実行結果（OutcomeEvidence）が存在し、それが「成功」を示していること。</li>
+            <li>リプレイポリシー（ReplayPolicy）が有効であり、期限切れでないこと。</li>
+            <li>現在の操作のリスクレベルが「リスク3（手動再承認しきい値）」未満であること。</li>
+          </ul>
+
+          <p>もし一つでも条件から外れる場合は、以下のように安全に判定が分岐します：</p>
+          <ul>
+            <li>リスクレベルが3以上 ➡️ <code>requires_human_anchor</code> (手動承認要求)</li>
+            <li>過去の実行が失敗 ➡️ <code>do_not_replay</code> (リプレイ禁止)</li>
+            <li>UIの完全一致ではなく部分一致 ➡️ <code>requires_llm_reasoning</code> (LLMによる推論要求)</li>
+            <li>ポリシーが期限切れ ➡️ <code>requires_human_anchor</code> (再承認要求)</li>
+          </ul>
+
+          <h2>3. マイルストーン1 完了条件と安全境界</h2>
+          <p>本マイルストーンは、データモデルの構築、上記の決定論的リプレイ判定ロジック、監査サマリー生成、およびインメモリDBを用いたテストがすべてクリアされたことで「完了」と定義されます。実際のOS特権昇格やアプリ操作などの外部副作用は一切行いません。</p>
+        </div>
+      </div>
+
+      <!-- EN -->
+      <div class="lang-section en">
+        <h1 class="post-title">Milestone 1: Causa Core Specification</h1>
+        <div class="post-content">
+          <p>This document defines the first safe implementation boundary for the Anchor DB ("Causa") project, focusing strictly on data structures and decision logic without side effects.</p>
+
+          <h2>1. SQLite Schema Design</h2>
+          <p>To track the chain of causality, we define the core relational structure in SQLite:</p>
+          <pre><code>CREATE TABLE AnchorCase (
+    id TEXT PRIMARY KEY,
+    user_intent TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE UISnapshot (
+    id TEXT PRIMARY KEY,
+    anchor_case_id TEXT NOT NULL,
+    ax_tree_json TEXT NOT NULL,
+    image_hash TEXT NOT NULL,
+    FOREIGN KEY(anchor_case_id) REFERENCES AnchorCase(id)
+);</code></pre>
+
+          <h2>2. Replay Eligibility Rules</h2>
+          <p>A historical case may return `replay_candidate` only if:</p>
+          <ul>
+            <li>current UI snapshot exactly matches the historical UI fingerprint</li>
+            <li>business object identity is verified</li>
+            <li>action payload hash matches</li>
+            <li>prior HumanApproval exists</li>
+            <li>prior OutcomeEvidence exists and indicates success</li>
+            <li>ReplayPolicy is valid and not expired</li>
+            <li>current risk level is below Risk 3</li>
+          </ul>
+
+          <p>Otherwise, it falls back to: `requires_human_anchor` (Risk 3+ or expired policy), `do_not_replay` (prior failure), or `requires_llm_reasoning` (partial UI match).</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- POST 4: RELEASE NOTES -->
+    <article id="post-4" class="post-card">
+      <div class="meta-info">
+        <span>2026-05-08</span>
+        <span class="tag">Release</span>
+        <span class="tag">v1.0-alpha</span>
+        <span class="tag">Core Log</span>
+      </div>
+
+      <!-- JA -->
+      <div class="lang-section ja active">
+        <h1 class="post-title">リリースノート: Causa Core v1.0-alpha</h1>
+        <div class="post-content">
+          <p>Causa Core（Anchor DBエンジン）の最初のマイルストーンとなる、v1.0-alphaのリリーフ概要です。本バージョンは機能・データ定義およびシミュレーションのためのロジックモジュールであり、外部OS等への破壊的影響を持たないよう保護されています。</p>
+
+          <h2>1. バージョン v1.0-alpha に含まれるもの (Features)</h2>
+          <ul>
+            <li><strong>データモデル定義</strong>: <code>AnchorCase</code>, <code>UISnapshot</code>, <code>LLMProposal</code>, <code>HumanApproval</code>, <code>ExecutionEvent</code>, <code>OutcomeEvidence</code>, <code>ReplayPolicy</code>, <code>ReplayDecision</code> などのPythonデータクラス（Dataclasses）の実装。</li>
+            <li><strong>決定論的リプレイ判定機能</strong>: 厳格な一致ルールとリスクしきい値に基づいて、自動実行の適格性を判定する純粋関数 <code>determine_replay_decision</code> の実装。</li>
+            <li><strong>監査ログ生成（Audit Summary）</strong>: 判定結果と理由コードを、人間が監査しやすい親切な自然文で説明・出力する <code>build_audit_summary</code> レイヤー。</li>
+            <li><strong>抽象ストレージレイヤー</strong>: データベースの実装に依存しないよう設計された、共通インターフェース <code>CausaRepository</code> の定義。</li>
+            <li><strong>テストインフラ</strong>: ローカルテスト用のインメモリDB（<code>InMemoryCausaRepository</code>）と、判定パイプライン全体をシミュレーションするための包括的な単体テスト群。</li>
+          </ul>
+
+          <h2>2. 本バージョンに明示的に含まれないもの (Non-Goals)</h2>
+          <p>安全境界の確保のため、以下の項目は本リリースから厳格に除外されています：</p>
+          <ul>
+            <li>実際のOSコマンドの実行、およびマウス・キーボード操作などの自動制御。</li>
+            <li>アクセシビリティAPI（Accessibility API）への直接のクエリやフック。</li>
+            <li>Dify、n8n等の外部ツールとの連携。</li>
+            <li>`sudo` コマンド等による管理者特権の昇格。</li>
+            <li>ネットワーク通信（ソケット、HTTPリクエスト等）。</li>
+            <li>本番環境のデータベース（Supabase、PostgreSQL、ローカル以外のSQLite）への直接の接続。</li>
+          </ul>
+
+          <h2>3. 今後のロードマップ (Next Steps)</h2>
+          <p>今回のアルファリリースでデータモデルとコア判定ロジックがフリーズ（確定）したため、次回のマイルストーンでは、コアロジックの独立性を維持したまま、ローカルでのデータ永続化を行うための <strong>SQLiteローカルアダプター</strong> の開発に着手する予定です。</p>
+        </div>
+      </div>
+
+      <!-- EN -->
+      <div class="lang-section en">
+        <h1 class="post-title">Release Notes: Causa Core v1.0-alpha</h1>
+        <div class="post-content">
+          <h2>1. What v1.0-alpha includes</h2>
+          <ul>
+            <li><strong>Data Models</strong>: Python dataclasses for `AnchorCase`, `UISnapshot`, `LLMProposal`, `HumanApproval`, `OutcomeEvidence`, `ReplayDecision`, and `AuditSummary`.</li>
+            <li><strong>Decision Logic</strong>: A pure deterministic function (`determine_replay_decision`) that assesses replay eligibility.</li>
+            <li><strong>Audit Summary</strong>: An informational layer (`build_audit_summary`) providing human-readable explanations of replay decisions.</li>
+            <li><strong>Storage Abstraction</strong>: The `CausaRepository` abstract base class establishing a storage-agnostic interface.</li>
+            <li><strong>Test Infrastructure</strong>: `InMemoryCausaRepository` alongside comprehensive simulation tests.</li>
+          </ul>
+
+          <h2>2. What it explicitly does not include</h2>
+          <p>For safety, the following are strictly excluded: OS execution, autonomous replay, accessibility API calls, network calls, sudo escalation, and production database usage.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- Footer -->
+    <footer>
+      <p>&copy; 2026 Sovereign Systems. Built with GitHub Pages &amp; Local AI.</p>
+    </footer>
+  </main>
+
+  <script>
+    let currentLang = 'ja';
+    let currentPostIdx = 0;
+
+    function switchLanguage(lang) {
+      currentLang = lang;
+      
+      // Update toggle buttons
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById(`btn-${lang}`).classList.add('active');
+
+      // Update visibility of language segments globally
+      document.querySelectorAll('.lang-section').forEach(sec => {
+        sec.classList.remove('active');
+      });
+      document.querySelectorAll(`.lang-section.${lang}`).forEach(sec => {
+        sec.classList.add('active');
+      });
+    }
+
+    function switchPost(postIdx, menuItem) {
+      currentPostIdx = postIdx;
+
+      // Update sidebar active state
+      document.querySelectorAll('.menu-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      menuItem.classList.add('active');
+
+      // Show/Hide post cards
+      document.querySelectorAll('article.post-card').forEach(card => {
+        card.classList.remove('active');
+      });
+      document.getElementById(`post-${postIdx}`).classList.add('active');
+
+      // Re-trigger language display for the newly loaded post
+      switchLanguage(currentLang);
+      
+      // Scroll to top of content
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>
