@@ -503,6 +503,9 @@
         <li class="menu-item" onclick="switchPost(4, this)">
           <span>🏷️</span> Release Notes v1.0
         </li>
+        <li class="menu-item" onclick="switchPost(5, this)">
+          <span>📱</span> iPad Remote Console
+        </li>
       </ul>
     </div>
 
@@ -1024,6 +1027,107 @@ CREATE TABLE UISnapshot (
 
           <h2>2. What it explicitly does not include</h2>
           <p>For safety, the following are strictly excluded: OS execution, autonomous replay, accessibility API calls, network calls, sudo escalation, and production database usage.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- POST 5: IPAD REMOTE CONSOLE -->
+    <article id="post-5" class="post-card">
+      <div class="meta-info">
+        <span>2026-05-30</span>
+        <span class="tag">PWA</span>
+        <span class="tag">iPad mini</span>
+        <span class="tag">Cloudflare Tunnel</span>
+        <span class="tag">Zero Trust Access</span>
+      </div>
+
+      <!-- JA -->
+      <div class="lang-section ja active">
+        <h1 class="post-title">iPad mini PWA コンソール + Cloudflare Tunnel + Zero Trust 安全リモートアクセス環境の構築</h1>
+        <div class="post-content">
+          <p>ローカルで起動しているAIエージェントやHammerspoonなどのシステム管理コンソールを、iPad miniからセキュアかつシームレスに操作するための、リモートアクセス＆PWA環境の構築ログです。</p>
+          <p>ルーターのポート開放を一切行わず、Cloudflare TunnelとZero Trust Accessを組み合わせることで、社外・外出先からでも安全にローカル環境へアクセスし、スクリーンショットやメッセージを相互に送受信できる仕組みを構築しました。</p>
+
+          <h2>1. ネットワーク＆セキュリティ設計 (Tunnel &amp; Zero Trust)</h2>
+          <p>家庭内のローカルネットワーク内に閉じているコンソール（<code>http://localhost:3000</code>）を、安全に外部公開するためにCloudflareのネットワークを利用しました。</p>
+          <ul>
+            <li><strong>Cloudflare Tunnel (kix-console)</strong>: <code>cloudflared</code> をローカルMac上で動作させ、ルーターのポートを開放することなく、安全に <code>https://antigravity.z0a.net</code> へのリクエストをローカルの <code>3000</code> ポートへとトンネリングします。</li>
+            <li><strong>Zero Trust Access Policy</strong>: 不特定多数からのアクセスを防ぐため、Cloudflare Zero TrustによるワンタイムPIN（OTP）認証ルールを設定。以下の信頼されたメールアドレスのみにアクセスを制限しました：
+              <ul>
+                <li><code>cx3.zoom@gmail.com</code></li>
+                <li><code>info@olbin.dev</code></li>
+              </ul>
+            </li>
+          </ul>
+
+          <h2>2. iPad miniに最適化されたPWAコンソール (UI/UX)</h2>
+          <p>外出先やソファの上でiPad mini（縦持ち <code>744px</code> 画面）から片手で操作できるよう、コンソールのUI/UXをブラッシュアップしました。</p>
+          <div class="highlight-box">
+            <p><strong>iPad mini의体験向上：</strong><br>
+            縦持ち時のスペースを最大限に活かす2カラム・サイドバーレイアウトを採用。入力文字数に応じて自動で縦幅が調整される自動リサイズ型テキスト入力エリアや、コンソール上のレイアウト崩れを防ぐレスポンシブなCSSグリッドを採用しました。
+            </p>
+          </div>
+
+          <h2>3. システムの常時稼働化 (launchd Daemon)</h2>
+          <p>Macの再起動時やシャットダウン後でも、コンソールとトンネルが自動でバックグラウンド起動するように、macOSの起動デーモン（<code>launchd</code>）のplistを設定し、自動永続化を行いました。</p>
+          <pre><code>&lt;!-- /Users/p/Library/LaunchAgents/ai.openclaw.gateway.plist --&gt;
+&lt;key&gt;Label&lt;/key&gt;&lt;string&gt;ai.openclaw.gateway&lt;/string&gt;
+&lt;key&gt;ProgramArguments&lt;/key&gt;
+&lt;array&gt;
+  &lt;string&gt;/Users/p/start_jules_task.sh&lt;/string&gt;
+&lt;/array&gt;
+&lt;key&gt;RunAtLoad&lt;/key&gt;&lt;true/&gt;</code></pre>
+
+          <h2>4. 「➕」機能：マルチパート画像＆スクリーンショットアップロード</h2>
+          <p style="margin-bottom: 20px;">コンソール上で文字入力が欄外に飛び出すバグや、スクリーンショット添付機能の不良を解消するため、バックエンドとフロントエンドの両面で以下の改修を行いました：</p>
+          <div class="card card-success">
+            <div class="card-label label-success">✓ 改善された機能</div>
+            <strong>Multerマルチパートアップロード ＆ CSSコンテキスト自動調整</strong>
+            <p style="margin-top: 8px;">
+              フロントエンドに <code>➕</code> ボタンを新設し、デバイスのカメラやフォトライブラリから画像ファイルを直接アップロードできるようになりました。<code>multer</code> を用いたマルチパートデータ処理により、Braveなどのブラウザキャッシュをクリアした後も、安定してスクリーンショットの送信と表示ができるようになっています。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- EN -->
+      <div class="lang-section en">
+        <h1 class="post-title">Building a Secure iPad Remote Console using Cloudflare Tunnel and Zero Trust Access</h1>
+        <div class="post-content">
+          <p>This entry documents the setup of a secure, mobile-friendly PWA remote console for system and agent management, optimized specifically for the iPad mini.</p>
+          <p>By leveraging Cloudflare Tunnel and Cloudflare Zero Trust, the local console running at <code>http://localhost:3000</code> is safely exposed via <code>https://antigravity.z0a.net</code> without requiring port forwarding.</p>
+
+          <h2>1. Network &amp; Security Architecture</h2>
+          <ul>
+            <li><strong>Cloudflare Tunnel (kix-console)</strong>: Connects the local port <code>3000</code> to the public DNS record at <code>antigravity.z0a.net</code> over outbound connections.</li>
+            <li><strong>Zero Trust Access Control</strong>: Restricts authentication using One-Time PIN (OTP) delivery to authorized email addresses:
+              <ul>
+                <li><code>cx3.zoom@gmail.com</code></li>
+                <li><code>info@olbin.dev</code></li>
+              </ul>
+            </li>
+          </ul>
+
+          <h2>2. iPad mini-Optimized PWA Frontend</h2>
+          <p>The user interface has been tailored to fit the vertical profile of the iPad mini screen (<code>744px</code> wide):</p>
+          <ul>
+            <li>Responsive 2-column sidebar layout that automatically adjusts on portrait screens.</li>
+            <li>Auto-resizing textareas that prevent text from clipping or overflowing their container boundaries.</li>
+            <li>Standalone PWA manifest configuration for a full-screen, native application feel.</li>
+          </ul>
+
+          <h2>3. Persistent macOS Daemon Setup</h2>
+          <p>The console server and tunnel client are configured to persist across macOS reboots using native launchd agents:</p>
+          <pre><code>&lt;!-- launchd plist mapping --&gt;
+&lt;key&gt;Label&lt;/key&gt;&lt;string&gt;ai.openclaw.gateway&lt;/string&gt;
+&lt;key&gt;ProgramArguments&lt;/key&gt;
+&lt;array&gt;
+  &lt;string&gt;/Users/p/start_jules_task.sh&lt;/string&gt;
+&lt;/array&gt;
+&lt;key&gt;RunAtLoad&lt;/key&gt;&lt;true/&gt;</code></pre>
+
+          <h2>4. Screenshot Upload &amp; Form Handling</h2>
+          <p>We resolved input layout clipping and added image upload capabilities (via the <code>➕</code> button) to allow sharing mobile screenshots directly with the host machine. The backend now processes multipart/form-data payloads cleanly using <code>multer</code>.</p>
         </div>
       </div>
     </article>
