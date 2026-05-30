@@ -506,6 +506,9 @@
         <li class="menu-item" onclick="switchPost(5, this)">
           <span>📱</span> iPad Remote Console
         </li>
+        <li class="menu-item" onclick="switchPost(6, this)">
+          <span>🏎️</span> SS-FIA Technical Data
+        </li>
       </ul>
     </div>
 
@@ -1128,6 +1131,43 @@ CREATE TABLE UISnapshot (
 
           <h2>4. Screenshot Upload &amp; Form Handling</h2>
           <p>We resolved input layout clipping and added image upload capabilities (via the <code>➕</code> button) to allow sharing mobile screenshots directly with the host machine. The backend now processes multipart/form-data payloads cleanly using <code>multer</code>.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- Post 6: SS-FIA Technical Data -->
+    <article id="post-6" class="post-card">
+      <!-- JA -->
+      <div class="lang-section ja active">
+        <h1 class="post-title">SS-FIA テクニカルデータ</h1>
+        <div class="post-content">
+          <p>SS-FIA（Super Sports Federation Internationale de l'Automobile）の技術要件と開発ドキュメントです。</p>
+
+          <h2>テクニカル仕様</h2>
+          <ul>
+            <li><strong>エンジン出力制限</strong>: 規定に基づく制限値の遵守</li>
+            <li><strong>シャシー安全基準</strong>: FIAホモロゲーション取得要件</li>
+            <li><strong>電子制御システム</strong>: 共通ECU of setup and mapping</li>
+          </ul>
+          
+          <p>詳細は、各セクションのドキュメントを参照してください。</p>
+        </div>
+      </div>
+
+      <!-- EN -->
+      <div class="lang-section en">
+        <h1 class="post-title">SS-FIA Technical Data</h1>
+        <div class="post-content">
+          <p>Technical requirements and development documentation for SS-FIA (Super Sports Federation Internationale de l'Automobile).</p>
+
+          <h2>Technical Specifications</h2>
+          <ul>
+            <li><strong>Engine Power Limits</strong>: Compliance with limits defined by regulations.</li>
+            <li><strong>Chassis Safety Standards</strong>: FIA homologation requirements.</li>
+            <li><strong>Electronic Control Systems</strong>: Common ECU setup and mapping.</li>
+          </ul>
+          
+          <p>Please refer to the specific section documents for details.</p>
         </div>
       </div>
     </article>
