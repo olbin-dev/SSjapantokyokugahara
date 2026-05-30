@@ -1180,6 +1180,14 @@ CREATE TABLE UISnapshot (
 
   <script>
     let currentLang = 'ja';
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    if (params.get('lang') === 'en' || hash === '#en') {
+      currentLang = 'en';
+    } else if (params.get('lang') === 'ja' || hash === '#ja') {
+      currentLang = 'ja';
+    }
+    
     let currentPostIdx = 0;
 
     function switchLanguage(lang) {
@@ -1221,6 +1229,9 @@ CREATE TABLE UISnapshot (
       // Scroll to top of content
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
+    // Initialize language on load
+    switchLanguage(currentLang);
   </script>
 </body>
 </html>
